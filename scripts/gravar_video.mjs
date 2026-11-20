@@ -160,7 +160,7 @@ const CAPITULOS = [
     await legenda(page, 'Muda-se o destino, o dia ou a hora, e a API responde de novo');
     await apontar(page, '#hora');
     await pausa(250);
-    await page.locator('#hora').fill('18:00');
+    await page.locator('#hora').selectOption('18');
     await pausa(1700);
     await clicar(page, '#alcance', 1500);
   },

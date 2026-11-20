@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Visitar Aveiro com menos gente</title>
 <meta name="description" content="Escolhe os locais, o dia e a hora de começar: a ordem de visita que apanha cada local mais longe do seu pico, segundo as contagens de peões de Aveiro.">
+<meta name="theme-color" content="#0a4fa3">
+<meta property="og:title" content="Visitar Aveiro com menos gente">
+<meta property="og:description" content="A ordem de visita que apanha cada local turístico longe do seu pico.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a4fa3'/%3E%3Cpath d='M16 26s7-7.2 7-12.4a7 7 0 10-14 0C9 18.8 16 26 16 26z' fill='none' stroke='%23fff' stroke-width='2.6'/%3E%3Ccircle cx='16' cy='13.5' r='2.3' fill='%23fff'/%3E%3C/svg%3E">
 <!--
   Segundo exemplo de uma aplicação feita com a API Aveiro em Movimento.
@@ -16,16 +19,21 @@
     /* presenças face ao pico do local: um só tom, do claro ao escuro */
     --p0: #e8eff8; --p1: #c3d6ee; --p2: #8fb2df; --p3: #3d72bd; --p4: #0a4fa3; }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--fundo); color: var(--tinta); font: 16px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body { margin: 0; background: var(--fundo); color: var(--tinta); font: 16px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
   h1, h2, p, ol, ul { margin: 0; }
   ol, ul { padding: 0; list-style: none; }
-  button { font: inherit; color: inherit; }
+  button { font: inherit; color: inherit; touch-action: manipulation; }
+  button:active { opacity: 0.75; }
   a { color: var(--sinal); text-underline-offset: 3px; }
   :focus-visible { outline: 2px solid var(--sinal); outline-offset: 2px; }
   [hidden] { display: none !important; }
 
   /* No telemóvel é uma coluna: pergunta, resposta, roteiro, grelha, mapa. */
-  main { max-width: 620px; margin: 0 auto; padding: 20px 16px 40px; }
+  main { max-width: 620px; margin: 0 auto; padding: 16px max(16px, env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  .so-largo { display: none; }
+  .outras { margin-top: 20px; font-size: 14px; text-align: center; color: var(--tinta-2); }
+  .outras a { display: inline-block; padding: 10px 6px; font-weight: 600; }
   .ecra, .corpo { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .lado, .direita { display: contents; }
   .feito { margin-top: 16px; }
@@ -53,20 +61,24 @@
   .sinal span { display: block; margin-top: 6px; font-size: 15px; }
 
   /* o roteiro, hora a hora */
-  .roteiro li { display: grid; grid-template-columns: 26px 42px minmax(0, 1fr) auto; align-items: center; gap: 0 10px; padding: 9px 0; border-top: 1px solid var(--linha); }
+  /* no telemóvel: a hora, o local e os minutos a pé numa linha; os números por baixo, a toda a largura */
+  .roteiro li { display: grid; grid-template-columns: 26px auto minmax(0, 1fr) auto; align-items: center; gap: 3px 10px; padding: 10px 0; border-top: 1px solid var(--linha); }
   .roteiro li:first-child { border-top: 0; }
+  .roteiro li > div { display: contents; }
   .n { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--tinta); color: #fff; font-size: 14px; font-weight: 800; }
   .roteiro time { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .roteiro b { display: block; font-size: 16px; line-height: 1.25; }
-  .roteiro small { display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--tinta-2); }
+  .roteiro small { grid-column: 2 / -1; grid-row: 2; display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--tinta-2); }
   .roteiro small i { flex: none; width: 12px; height: 12px; border-radius: 3px; }
-  .roteiro em { font-size: 13px; font-style: normal; color: var(--tinta-2); white-space: nowrap; }
+  .roteiro em { grid-column: 4; grid-row: 1; font-size: 13px; font-style: normal; color: var(--tinta-2); white-space: nowrap; }
 
   /* a grelha: cada local ao longo do dia, com a hora da visita marcada */
   .grelha-topo { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }
   .grelha-topo span { font-size: 13px; color: var(--tinta-2); }
   table { width: 100%; margin-top: 8px; border-collapse: separate; border-spacing: 3px; table-layout: fixed; font-variant-numeric: tabular-nums; }
   thead th { font-size: 12px; font-weight: 600; color: var(--tinta-2); }
+  /* no telemóvel as colunas são estreitas: fica o rótulo de hora sim, hora não (9h, 11h, …) */
+  thead th:nth-child(2n + 3) { visibility: hidden; }
   th:first-child { width: 96px; }
   tbody th { padding-right: 4px; font-size: 12.5px; font-weight: 600; line-height: 1.2; text-align: left; }
   /* no telemóvel as células são estreitas de mais para o número: fica a cor, e os números das visitas estão no roteiro */
@@ -74,9 +86,12 @@
   .p0 { background: var(--p0); } .p1 { background: var(--p1); } .p2 { background: var(--p2); } .p3 { background: var(--p3); } .p4 { background: var(--p4); }
   td.p3, td.p4 { color: #fff; }
   td.visita { font-weight: 800; box-shadow: 0 0 0 2px var(--tinta), inset 0 0 0 1.5px #fff; }
-  .legenda { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 8px; font-size: 12.5px; color: var(--tinta-2); }
+  td { cursor: pointer; }
+  .legenda { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 8px; font-size: 12.5px; color: var(--tinta-2); }
+  .legenda span { display: inline-flex; align-items: center; gap: 5px; }
   .legenda i { width: 16px; height: 12px; border-radius: 3px; }
-  .legenda .marca { width: 16px; height: 12px; margin-left: 10px; background: var(--papel); box-shadow: inset 0 0 0 2px var(--tinta); }
+  .legenda .marca { background: var(--papel); box-shadow: inset 0 0 0 2px var(--tinta); }
+  .celula { margin-top: 6px; font-size: 13px; color: var(--tinta-2); }
   .ganho { margin-top: 8px; font-size: 14px; color: var(--tinta-2); }
   .ganho b { color: var(--tinta); }
 
@@ -119,12 +134,16 @@
     .sinal { padding: 15px 20px 14px; }
     .sinal strong { font-size: clamp(22px, 2vw, 30px); }
     .roteiro-cartao { flex: 1 1 0; min-height: 0; overflow-y: auto; }
+    .so-largo { display: inline; }
+    .so-toque { display: none; }
+    .outras { margin-top: 14px; }
     /* cada paragem numa linha só */
-    .roteiro li { padding: 5px 0; }
+    .roteiro li { grid-template-columns: 26px 42px minmax(0, 1fr) auto; gap: 0 10px; padding: 5px 0; }
     .roteiro li > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 12px; }
     .roteiro b { min-width: 168px; font-size: 15px; }
     .grelha-cartao { flex: none; padding: 12px 16px; }
     th:first-child { width: 150px; }
+    thead th:nth-child(2n + 3) { visibility: visible; }
     td { height: 26px; font-size: 11.5px; }
     .mapa-cartao { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; padding: 10px 16px 12px; }
     #mapa { flex: 1 1 0; min-height: 0; height: 0; aspect-ratio: auto; margin-top: 4px; }
@@ -139,7 +158,7 @@
       <svg viewBox="0 0 32 32" width="44" height="44" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0a4fa3"/><path d="M16 26s7-7.2 7-12.4a7 7 0 10-14 0C9 18.8 16 26 16 26z" fill="none" stroke="#fff" stroke-width="2.6"/><circle cx="16" cy="13.5" r="2.3" fill="#fff"/></svg>
       <div>
         <h1>Visitar Aveiro com menos gente</h1>
-        <p>Escolhe os locais, o dia e a hora de começar. A ordem vem das contagens de peões nos locais turísticos da cidade.</p>
+        <p>Escolhe os locais, o dia e a hora de começar.<span class="so-largo"> A ordem vem das contagens de peões nos locais turísticos da cidade.</span></p>
       </div>
     </header>
 
@@ -170,7 +189,7 @@
         <section class="cartao mapa-cartao">
           <div class="mapa-topo">
             <h2>No mapa</h2>
-            <a id="google" href="#" target="_blank" rel="noreferrer" hidden>Abrir o roteiro a pé no Google Maps</a>
+            <a id="google" href="#" target="_blank" rel="noreferrer" hidden>Abrir no Google Maps</a>
           </div>
           <svg id="mapa" viewBox="0 0 680 480" role="img" aria-label="Mapa do centro de Aveiro com as paragens do roteiro numeradas pela ordem de visita"></svg>
           <p class="nota">Os números são a ordem de visita. A linha liga as paragens em linha reta.</p>
@@ -187,6 +206,8 @@
     <p>A API experimenta todas as ordens possíveis, contando uma hora por local entre as 9h e as 18h, e procura a que apanha cada local mais longe do seu pico. Entre as que ficam a menos de 5 pontos percentuais dessa, escolhe a que obriga a andar menos.</p>
     <p>As presenças foram contadas pelos sensores do Aveiro Tech City Living Lab na semana de 3 a 10 de novembro de 2026, hora a hora: a média dos dias úteis, um sábado e um domingo. São passagens de peões nas zonas de cada local, e a mesma pessoa pode ser contada mais do que uma vez. O roteiro diz como foi essa semana, não quanta gente lá está neste momento. Os minutos a pé são uma estimativa pela distância em linha reta. <a id="json" href="#" target="_blank" rel="noreferrer">Ver a resposta completa da API</a></p>
   </section>
+
+  <p class="outras">Outra aplicação feita com a mesma API:<br><a href="../estacionar/">Onde estaciono em Aveiro?</a></p>
 </main>
 
 <script>
@@ -300,7 +321,8 @@ async function responder() {
           }).join('') + '</tr>';
       }).join('') +
       '</tbody></table>' +
-      '<p class="legenda">menos gente<i class="p0"></i><i class="p1"></i><i class="p2"></i><i class="p3"></i><i class="p4"></i>mais gente, face ao pico de cada local<i class="marca"></i>a tua visita</p>' +
+      '<p class="legenda"><span>menos gente<i class="p0"></i><i class="p1"></i><i class="p2"></i><i class="p3"></i><i class="p4"></i>mais gente</span><span><i class="marca"></i>a tua visita</span></p>' +
+      '<p class="celula" id="celula">Cada linha compara o local com o seu próprio pico.<span class="so-toque"> Toca numa hora para ver o número.</span></p>' +
       '<p class="ganho">' + ganho + '</p>';
 
     const ponto = (p) => p.lat + ',' + p.lon;
@@ -364,6 +386,12 @@ function desenharMapa() {
 }
 
 addEventListener('resize', desenharMapa);
+
+// No telemóvel as células não levam o número: um toque numa hora mostra-o por baixo da grelha.
+$('grelha').addEventListener('click', (e) => {
+  const celula = e.target.closest('td');
+  if (celula) $('celula').textContent = celula.title + '.';
+});
 
 // Arranque: os locais e o mapa pedem-se uma vez; o roteiro, sempre que a pergunta muda.
 if (SEM_API) {

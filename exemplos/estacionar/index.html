@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Onde estaciono em Aveiro?</title>
 <meta name="description" content="Diz para onde vais e a que horas chegas: o parque com lugares livres mais perto, segundo os sensores de estacionamento de Aveiro.">
+<meta name="theme-color" content="#0a4fa3">
+<meta property="og:title" content="Onde estaciono em Aveiro?">
+<meta property="og:description" content="O parque com lugares livres mais perto do destino, à hora de chegada.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a4fa3'/%3E%3Cpath d='M12 24V8h6a5 5 0 010 10h-6' fill='none' stroke='%23fff' stroke-width='3.4'/%3E%3C/svg%3E">
 <!--
   Exemplo de uma aplicação feita com a API Aveiro em Movimento.
@@ -14,17 +17,23 @@
 <style>
   :root { --fundo: #f2f4f6; --papel: #fff; --tinta: #101b2d; --tinta-2: #4b586d; --linha: #d3dae2; --linha-forte: #a3aebd; --sinal: #0a4fa3; --livre: #0b8457; }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--fundo); color: var(--tinta); font: 16px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body { margin: 0; background: var(--fundo); color: var(--tinta); font: 16px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
   h1, h2, p, ol, ul, dl, dd { margin: 0; }
   ol, ul { padding: 0; list-style: none; }
-  button, input { font: inherit; color: inherit; }
+  button, input, select { font: inherit; color: inherit; }
+  button { touch-action: manipulation; }
+  button:active, .ir:active { opacity: 0.75; }
   a { color: var(--sinal); text-underline-offset: 3px; }
   :focus-visible { outline: 2px solid var(--sinal); outline-offset: 2px; }
 
   [hidden] { display: none !important; }
 
   /* No telemóvel é uma coluna: pergunta, resposta, histórico, alternativas, mapa. */
-  main { max-width: 620px; margin: 0 auto; padding: 20px 16px 40px; }
+  main { max-width: 620px; margin: 0 auto; padding: 16px max(16px, env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  .so-largo { display: none; }
+  .outras { margin-top: 20px; font-size: 14px; text-align: center; color: var(--tinta-2); }
+  .outras a { display: inline-block; padding: 10px 6px; font-weight: 600; }
   .ecra, .corpo { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .lado, .direita { display: contents; }
   #outros { order: 1; }
@@ -51,9 +60,9 @@
   .dias button:first-child { border-left: 0; }
   .dias button[aria-pressed='true'] { background: var(--tinta); color: #fff; }
   .dias button:focus-visible { outline-offset: -3px; }
-  .hora { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-  .hora input { height: 48px; padding: 0 12px; border: 1px solid var(--linha-forte); border-radius: 8px; background: var(--papel); font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .hora small { font-size: 13px; color: var(--tinta-2); }
+  .hora { display: flex; align-items: center; gap: 8px 12px; }
+  /* a hora escolhe-se numa lista: os dados são por hora, e no telemóvel abre a roda do sistema */
+  .hora select { height: 48px; padding: 0 40px 0 14px; border: 1px solid var(--linha-forte); border-radius: 8px; background: var(--papel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%23101b2d' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center / 20px; -webkit-appearance: none; appearance: none; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
 
   /* a resposta, como sinal de direção: azul porque assenta em dados medidos */
   .sinal { display: flex; align-items: center; gap: 16px; padding: 20px 20px 18px; border-radius: 12px; background: var(--sinal); color: #fff; box-shadow: inset 0 0 0 2px var(--sinal), inset 0 0 0 5px #fff; }
@@ -115,8 +124,9 @@
     h1 { font-size: 24px; }
     .destinos button { min-height: 38px; font-size: 14.5px; }
     .dias button { min-height: 40px; }
-    .hora input { height: 42px; font-size: 18px; }
-    .hora small { display: none; }
+    .hora select { height: 42px; font-size: 18px; }
+    .so-largo { display: inline; }
+    .outras { margin-top: 14px; }
     .sinal { padding: 16px 20px 15px; }
     .sinal strong { font-size: clamp(24px, 2.1vw, 32px); }
     .ir { min-height: 48px; margin-top: 10px; }
@@ -136,7 +146,7 @@
       <svg viewBox="0 0 32 32" width="44" height="44" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0a4fa3"/><path d="M12 24V8h6a5 5 0 010 10h-6" fill="none" stroke="#fff" stroke-width="3.4"/></svg>
       <div>
         <h1>Onde estaciono em Aveiro?</h1>
-        <p>Diz para onde vais e a que horas chegas. A resposta vem dos sensores de estacionamento da cidade.</p>
+        <p>Diz para onde vais e a que horas chegas.<span class="so-largo"> A resposta vem dos sensores de estacionamento da cidade.</span></p>
       </div>
     </header>
 
@@ -153,8 +163,7 @@
               <div class="dias" id="dias" role="group" aria-labelledby="t-dia"></div>
               <div class="hora">
                 <label for="hora">às</label>
-                <input id="hora" type="time" step="1800" value="08:30">
-                <small id="hora-nota"></small>
+                <select id="hora"></select>
               </div>
             </div>
           </div>
@@ -185,6 +194,8 @@
     <pre id="pedido"></pre>
     <p>Os lugares livres foram medidos pelos sensores do Aveiro Tech City Living Lab na semana de 3 a 10 de novembro de 2026, hora a hora. Essa semana tem um dia de cada: a resposta é o que houve nesse dia da semana a essa hora, não o que há neste momento. <a id="json" href="#" target="_blank" rel="noreferrer">Ver a resposta completa da API</a></p>
   </section>
+
+  <p class="outras">Outra aplicação feita com a mesma API:<br><a href="../visitar/">Visitar Aveiro com menos gente</a></p>
 </main>
 
 <script>
@@ -221,7 +232,7 @@ const DIAS = [
 ];
 let destino = DESTINOS[0];
 let dia = DIAS[(new Date().getDay() + 6) % 7]; // por omissão, o dia de hoje
-let hora = 8;
+let hora = new Date().getHours(); // e a hora a que a página é aberta
 let mapa = null; // desenho das ruas e projeção, pedidos uma vez
 const parquesDe = {}; // os parques de cada dia da semana, pedidos uma vez por dia
 let parques = []; // os parques do dia escolhido, com os lugares livres das 24 horas
@@ -264,7 +275,6 @@ async function responder() {
   const caminho = '/v1/respostas/onde-estacionar?destino=' + destino.lon.toFixed(5) + ',' + destino.lat.toFixed(5) + '&dia=' + dia[0] + '&hora=' + hora + '&cenario=normal&limite=3';
   $('pedido').textContent = 'GET ' + caminho + '\nX-API-Key: ' + CHAVE;
   $('json').href = (API || location.origin) + caminho;
-  $('hora-nota').textContent = 'Os dados são por hora: conta a das ' + hora + 'h.';
   try {
     // a recomendação e, para o gráfico e o mapa, os parques desse dia da semana (pedidos uma vez por dia)
     parquesDe[dia[0]] = parquesDe[dia[0]] || pedir('/v1/estacionamento?dia=' + dia[0]);
@@ -343,7 +353,10 @@ function desenharMapa(sugeridos = ultimos) {
   const porUnidade = el.clientWidth && el.clientHeight ? Math.min(el.clientWidth / w, el.clientHeight / h) : 280 / w;
   const escala = 1.45 / porUnidade;
 
-  const placas = parques.map((p) => {
+  // uma placa cortada pela margem do mapa lê-se mal: além das sugeridas, só entram as que cabem inteiras
+  const sugeridas = new Set(sugeridos.map((s) => s.id));
+  const cabe = (p) => sugeridas.has(p.id) || (p.x - 8 * escala >= x0 && p.x + 36 * escala <= x0 + w && p.y - 8 * escala >= y0 && p.y + 8 * escala <= y0 + h);
+  const placas = parques.filter(cabe).map((p) => {
     const ativo = p.estado === 'ativo';
     const texto = ativo ? String(p.livres[hora]) : '?';
     const largura = 9 + texto.length * 5.6;
@@ -375,10 +388,9 @@ $('alcance').addEventListener('click', () => {
 });
 addEventListener('resize', () => desenharMapa());
 
-$('hora').addEventListener('input', (e) => {
-  const h = Number(e.target.value.split(':')[0]);
-  if (!e.target.value || h === hora) return;
-  hora = h;
+$('hora').innerHTML = Array.from({ length: 24 }, (_, h) => '<option value="' + h + '"' + (h === hora ? ' selected' : '') + '>' + String(h).padStart(2, '0') + ':00</option>').join('');
+$('hora').addEventListener('change', (e) => {
+  hora = Number(e.target.value);
   responder();
 });
 
