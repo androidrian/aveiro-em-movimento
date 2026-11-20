@@ -49,6 +49,8 @@ ENTRADA = """<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aveiro em Movimento · exemplos</title>
 <meta name="description" content="Duas aplicações de exemplo construídas sobre a API Aveiro em Movimento: onde estacionar e por que ordem visitar a cidade.">
+<meta name="theme-color" content="#0a4fa3">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a4fa3'/%3E%3Cpath d='M7 23l3-14h3l-3 14zM14.5 23l3-14h3l-3 14zM22 23l3-14h3l-3 14z' fill='%23fff' transform='translate(-2 0)'/%3E%3C/svg%3E">
 <style>
   :root { --fundo: #f2f4f6; --papel: #fff; --tinta: #101b2d; --tinta-2: #4b586d; --linha: #d3dae2; --sinal: #0a4fa3; }
   * { box-sizing: border-box; }
