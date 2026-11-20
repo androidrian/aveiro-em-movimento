@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Onde estaciono em Aveiro?</title>
+<meta name="description" content="Diz para onde vais e a que horas chegas: o parque com lugares livres mais perto, segundo os sensores de estacionamento de Aveiro.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a4fa3'/%3E%3Cpath d='M12 24V8h6a5 5 0 010 10h-6' fill='none' stroke='%23fff' stroke-width='3.4'/%3E%3C/svg%3E">
+<!--
+  Exemplo de uma aplicação feita com a API Aveiro em Movimento.
+  É este ficheiro e mais nada: sem bibliotecas, sem compilação, sem servidor próprio.
+  Para a publicar noutro sítio, basta alojar o ficheiro e dizer onde está a API: index.html?api=https://a-vossa-api
+-->
+<style>
+  :root { --fundo: #f2f4f6; --papel: #fff; --tinta: #101b2d; --tinta-2: #4b586d; --linha: #d3dae2; --linha-forte: #a3aebd; --sinal: #0a4fa3; --livre: #0b8457; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--tinta); font: 16px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  h1, h2, p, ol, ul, dl, dd { margin: 0; }
+  ol, ul { padding: 0; list-style: none; }
+  button, input { font: inherit; color: inherit; }
+  a { color: var(--sinal); text-underline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--sinal); outline-offset: 2px; }
+
+  [hidden] { display: none !important; }
+
+  /* No telemóvel é uma coluna: pergunta, resposta, histórico, alternativas, mapa. */
+  main { max-width: 620px; margin: 0 auto; padding: 20px 16px 40px; }
+  .ecra, .corpo { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .lado, .direita { display: contents; }
+  #outros { order: 1; }
+  .mapa-cartao { order: 2; }
+  .feito { margin-top: 16px; }
+  header { display: flex; align-items: center; gap: 12px; }
+  header svg { flex: none; }
+  h1 { font-size: 26px; font-weight: 800; line-height: 1.15; letter-spacing: -0.01em; }
+  header p { margin-top: 2px; font-size: 14px; color: var(--tinta-2); }
+  h2 { font-size: 15px; font-weight: 700; }
+  .cartao { background: var(--papel); border: 1px solid var(--linha); border-radius: 12px; padding: 14px 16px; }
+
+  /* a pergunta: para onde e a que horas */
+  .pergunta { display: grid; gap: 14px; }
+  .campo > span, .campo > label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--tinta-2); }
+  .destinos { display: flex; flex-wrap: wrap; gap: 8px; }
+  .destinos button { min-height: 44px; padding: 0 14px; border: 1px solid var(--linha-forte); border-radius: 999px; background: var(--papel); font-size: 15px; font-weight: 600; cursor: pointer; }
+  .destinos button[aria-pressed='true'] { background: var(--tinta); border-color: var(--tinta); color: #fff; }
+  /* o dia da semana (sem data) e a hora de chegada */
+  .quando { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+  .hora label { font-size: 15px; font-weight: 600; color: var(--tinta-2); }
+  .dias { flex: 1 1 300px; display: flex; border: 1px solid var(--linha-forte); border-radius: 8px; overflow: hidden; }
+  .dias button { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0; border: 0; border-left: 1px solid var(--linha-forte); background: var(--papel); font-size: 14px; font-weight: 600; cursor: pointer; }
+  .dias button:first-child { border-left: 0; }
+  .dias button[aria-pressed='true'] { background: var(--tinta); color: #fff; }
+  .dias button:focus-visible { outline-offset: -3px; }
+  .hora { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .hora input { height: 48px; padding: 0 12px; border: 1px solid var(--linha-forte); border-radius: 8px; background: var(--papel); font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .hora small { font-size: 13px; color: var(--tinta-2); }
+
+  /* a resposta, como sinal de direção: azul porque assenta em dados medidos */
+  .sinal { display: flex; align-items: center; gap: 16px; padding: 20px 20px 18px; border-radius: 12px; background: var(--sinal); color: #fff; box-shadow: inset 0 0 0 2px var(--sinal), inset 0 0 0 5px #fff; }
+  .sinal svg { flex: none; }
+  .sinal strong { display: block; font-size: clamp(22px, 5.4vw, 30px); font-weight: 800; line-height: 1.12; letter-spacing: -0.01em; text-wrap: balance; }
+  .sinal span { display: block; margin-top: 6px; font-size: 15px; }
+  .sinal.sem { background: var(--papel); color: var(--tinta); box-shadow: inset 0 0 0 2px var(--linha-forte); }
+  .ir { display: flex; align-items: center; justify-content: center; min-height: 52px; margin-top: 12px; border-radius: 10px; background: var(--tinta); color: #fff; font-size: 17px; font-weight: 700; text-decoration: none; }
+  .ir:hover { background: #24344f; }
+
+  /* o histórico do parque escolhido */
+  .dia { display: flex; align-items: flex-end; gap: 2px; height: 96px; margin-top: 12px; border-bottom: 1px solid var(--linha-forte); }
+  .dia i { flex: 1 1 0; min-width: 0; border-radius: 3px 3px 0 0; background: #b9cbe6; }
+  .dia i.agora { background: var(--sinal); }
+  .eixo { display: flex; justify-content: space-between; margin-top: 4px; font-size: 12px; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+  .porque p { margin-top: 10px; font-size: 14px; color: var(--tinta-2); }
+  .porque p b { color: var(--tinta); }
+
+  .outros li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 12px; padding: 10px 0; border-top: 1px solid var(--linha); }
+  .outros li:first-child { border-top: 0; padding-top: 4px; }
+  .outros b { font-size: 16px; }
+  .outros span { grid-column: 1; font-size: 14px; color: var(--tinta-2); }
+  .outros a { grid-row: 1 / span 2; grid-column: 2; display: flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; }
+
+  /* mapa: toca-se para escolher outro destino */
+  #mapa { display: block; width: 100%; height: auto; aspect-ratio: 680 / 550; margin-top: 8px; border-radius: 8px; background: #f8fafb; border: 1px solid var(--linha); cursor: crosshair; touch-action: manipulation; }
+  #mapa text { font-family: inherit; }
+  .mapa-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .mapa-topo button { min-height: 40px; padding: 0 12px; border: 1px solid var(--linha-forte); border-radius: 8px; background: var(--papel); font-size: 14px; font-weight: 600; cursor: pointer; }
+  .ruas { fill: none; stroke: #c9d2dd; stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+  .caminho { fill: none; stroke: var(--sinal); stroke-width: 3; stroke-dasharray: 1 7; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+  .parque rect { fill: #fff; stroke: var(--sinal); stroke-width: 1; }
+  .parque .p { fill: var(--sinal); stroke: none; }
+  .parque text { font-size: 10px; font-weight: 800; fill: var(--tinta); }
+  .parque .letra { fill: #fff; }
+  .parque.cheio rect { stroke: #8a94a3; }
+  .parque.cheio .p { fill: #8a94a3; }
+  .escolhido { fill: rgba(10, 79, 163, 0.14); stroke: var(--sinal); stroke-width: 2; }
+  .destino circle { fill: var(--tinta); stroke: #fff; stroke-width: 2; }
+  .destino text { font-size: 11px; font-weight: 800; fill: var(--tinta); paint-order: stroke; stroke: #f8fafb; stroke-width: 4px; }
+  .nota { margin-top: 6px; font-size: 13px; color: var(--tinta-2); }
+
+  /* como foi feito */
+  .feito p { margin-top: 6px; font-size: 14px; color: var(--tinta-2); }
+  pre { margin: 10px 0 0; padding: 12px; overflow-x: auto; border-radius: 8px; background: var(--tinta); color: #dce4f0; font: 12.5px/1.55 ui-monospace, Consolas, monospace; }
+  .aviso { color: #8a1c0c; }
+
+  /* No portátil, a pergunta, a resposta, o histórico, o mapa e as alternativas cabem na janela, sem deslizar:
+     duas colunas com a altura do ecrã, em que o gráfico e o mapa ficam com o espaço que sobra.
+     "Como foi feito" vem logo a seguir, ao deslizar. */
+  @media (min-width: 1000px) {
+    main { max-width: 1440px; padding: 0 20px 32px; }
+    .ecra { height: 100vh; height: 100dvh; min-height: 580px; grid-template-rows: auto minmax(0, 1fr); gap: 12px; padding: 14px 0 16px; }
+    .corpo { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); min-height: 0; }
+    .lado, .direita { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+    #outros, .mapa-cartao { order: 0; }
+    .feito { margin-top: 0; }
+    header svg { width: 40px; height: 40px; }
+    h1 { font-size: 24px; }
+    .destinos button { min-height: 38px; font-size: 14.5px; }
+    .dias button { min-height: 40px; }
+    .hora input { height: 42px; font-size: 18px; }
+    .hora small { display: none; }
+    .sinal { padding: 16px 20px 15px; }
+    .sinal strong { font-size: clamp(24px, 2.1vw, 32px); }
+    .ir { min-height: 48px; margin-top: 10px; }
+    .porque { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .dia { flex: 1 1 0; min-height: 36px; height: auto; }
+    .mapa-cartao { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+    #mapa { flex: 1 1 0; min-height: 0; height: 0; aspect-ratio: auto; }
+    .outros { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; }
+    .outros li, .outros li:first-child { border-top: 0; padding: 4px 0 0; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="ecra">
+    <header>
+      <svg viewBox="0 0 32 32" width="44" height="44" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0a4fa3"/><path d="M12 24V8h6a5 5 0 010 10h-6" fill="none" stroke="#fff" stroke-width="3.4"/></svg>
+      <div>
+        <h1>Onde estaciono em Aveiro?</h1>
+        <p>Diz para onde vais e a que horas chegas. A resposta vem dos sensores de estacionamento da cidade.</p>
+      </div>
+    </header>
+
+    <div class="corpo">
+      <div class="lado">
+        <section class="cartao pergunta" aria-label="Para onde e a que horas">
+          <div class="campo">
+            <span id="t-destino">Vou para</span>
+            <div class="destinos" id="destinos" role="group" aria-labelledby="t-destino"></div>
+          </div>
+          <div class="campo">
+            <span id="t-dia">Chego</span>
+            <div class="quando">
+              <div class="dias" id="dias" role="group" aria-labelledby="t-dia"></div>
+              <div class="hora">
+                <label for="hora">às</label>
+                <input id="hora" type="time" step="1800" value="08:30">
+                <small id="hora-nota"></small>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section aria-live="polite" id="resposta"><p class="cartao">A perguntar à API…</p></section>
+        <section class="cartao porque" id="porque" hidden></section>
+      </div>
+
+      <div class="direita">
+        <section class="cartao mapa-cartao">
+          <div class="mapa-topo">
+            <h2>No mapa</h2>
+            <button type="button" id="alcance">Ver a cidade toda</button>
+          </div>
+          <svg id="mapa" viewBox="0 0 680 550" role="img" aria-label="Mapa do centro de Aveiro com os parques, o destino e o parque recomendado"></svg>
+          <p class="nota">Os números são os lugares livres à hora de chegada. Toca no mapa para escolher outro destino.</p>
+        </section>
+        <section class="cartao" id="outros" hidden></section>
+      </div>
+    </div>
+  </div>
+
+  <section class="cartao feito">
+    <h2>Como foi feito</h2>
+    <p id="com-api">Esta página é um ficheiro só, sem bibliotecas. A recomendação é um pedido à API Aveiro em Movimento, que já devolve a frase, o parque e as alternativas:</p>
+    <p id="sem-api" hidden>Esta página é um ficheiro só, sem bibliotecas. Nesta versão publicada não há API por trás: os lugares livres da semana medida vêm embutidos na página e a recomendação é calculada aqui, com a mesma regra. Ligada à API Aveiro em Movimento, a página faz só este pedido e recebe a resposta pronta:</p>
+    <pre id="pedido"></pre>
+    <p>Os lugares livres foram medidos pelos sensores do Aveiro Tech City Living Lab na semana de 3 a 10 de novembro de 2026, hora a hora. Essa semana tem um dia de cada: a resposta é o que houve nesse dia da semana a essa hora, não o que há neste momento. <a id="json" href="#" target="_blank" rel="noreferrer">Ver a resposta completa da API</a></p>
+  </section>
+</main>
+
+<script>
+// Onde está a API: ?api=https://... ou, por omissão, o servidor de onde esta página veio.
+const API = new URLSearchParams(location.search).get('api') || (location.protocol === 'file:' ? 'http://localhost:8000' : '');
+const CHAVE = 'cidadaos-demo';
+// Na versão publicada sem API (exemplos/sem-api.js), os mesmos pedidos são respondidos na própria página.
+const SEM_API = typeof aveiroSemApi === 'function';
+const pedir = (caminho) =>
+  SEM_API
+    ? aveiroSemApi(caminho)
+    : fetch(API + caminho, { headers: { 'X-API-Key': CHAVE } }).then((r) => {
+        if (!r.ok) throw new Error('a API respondeu ' + r.status);
+        return r.json();
+      });
+
+// Destinos de exemplo (lon, lat). Qualquer outro escolhe-se com um toque no mapa.
+const DESTINOS = [
+  { nome: 'Hackathon, Fábrica Ciência Viva', lon: -8.6574, lat: 40.6381 },
+  { nome: 'Rossio', lon: -8.6565, lat: 40.6412 },
+  { nome: 'Fórum Aveiro', lon: -8.6531, lat: 40.6416 },
+  { nome: 'Estação de comboios', lon: -8.6398, lat: 40.6433 },
+  { nome: 'Universidade', lon: -8.6564, lat: 40.6312 },
+];
+// Dias da semana: o identificador que a API espera, a abreviatura do botão e como se diz numa frase.
+const DIAS = [
+  ['segunda', 'Seg', 'uma segunda-feira'],
+  ['terca', 'Ter', 'uma terça-feira'],
+  ['quarta', 'Qua', 'uma quarta-feira'],
+  ['quinta', 'Qui', 'uma quinta-feira'],
+  ['sexta', 'Sex', 'uma sexta-feira'],
+  ['sabado', 'Sáb', 'um sábado'],
+  ['domingo', 'Dom', 'um domingo'],
+];
+let destino = DESTINOS[0];
+let dia = DIAS[(new Date().getDay() + 6) % 7]; // por omissão, o dia de hoje
+let hora = 8;
+let mapa = null; // desenho das ruas e projeção, pedidos uma vez
+const parquesDe = {}; // os parques de cada dia da semana, pedidos uma vez por dia
+let parques = []; // os parques do dia escolhido, com os lugares livres das 24 horas
+let medido = ''; // em que data foi medido o dia escolhido, dito pela API
+let vez = 0; // só a resposta ao pedido mais recente é mostrada
+let ultimos = []; // os parques sugeridos na última resposta, para voltar a desenhar o mapa
+let cidadeToda = false;
+
+const $ = (id) => document.getElementById(id);
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const noGoogleMaps = (p) => 'https://www.google.com/maps/dir/?api=1&destination=' + p.lat + ',' + p.lon + '&travelmode=driving';
+const P = '<svg viewBox="0 0 24 24" width="44" height="44" aria-hidden="true"><path d="M8.5 20V4.5h5a4.5 4.5 0 010 9h-5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+function mostrarDestinos() {
+  const lista = DESTINOS.includes(destino) ? DESTINOS : DESTINOS.concat(destino);
+  $('destinos').innerHTML = lista.map((d, i) => '<button type="button" data-i="' + i + '" aria-pressed="' + (d === destino) + '">' + esc(d.nome) + '</button>').join('');
+  $('destinos').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => escolher(lista[b.dataset.i])));
+}
+
+function escolher(d) {
+  destino = d;
+  mostrarDestinos();
+  responder();
+}
+
+function mostrarDias() {
+  $('dias').innerHTML = DIAS.map((d, i) => '<button type="button" data-i="' + i + '" aria-pressed="' + (d === dia) + '" aria-label="' + d[2].split(' ')[1] + '">' + d[1] + '</button>').join('');
+  $('dias').querySelectorAll('button').forEach((b) =>
+    b.addEventListener('click', () => {
+      dia = DIAS[b.dataset.i];
+      mostrarDias();
+      responder();
+    }),
+  );
+}
+
+// A pergunta à API e a resposta no ecrã.
+async function responder() {
+  const n = ++vez;
+  const caminho = '/v1/respostas/onde-estacionar?destino=' + destino.lon.toFixed(5) + ',' + destino.lat.toFixed(5) + '&dia=' + dia[0] + '&hora=' + hora + '&cenario=normal&limite=3';
+  $('pedido').textContent = 'GET ' + caminho + '\nX-API-Key: ' + CHAVE;
+  $('json').href = (API || location.origin) + caminho;
+  $('hora-nota').textContent = 'Os dados são por hora: conta a das ' + hora + 'h.';
+  try {
+    // a recomendação e, para o gráfico e o mapa, os parques desse dia da semana (pedidos uma vez por dia)
+    parquesDe[dia[0]] = parquesDe[dia[0]] || pedir('/v1/estacionamento?dia=' + dia[0]);
+    const [r, est] = await Promise.all([pedir(caminho), parquesDe[dia[0]]]);
+    if (n !== vez) return;
+    parques = est.postes;
+    medido = est.fonte.replace(/^real \(|\)$/g, '');
+    const [melhor, ...outros] = r.itens;
+    if (!melhor) {
+      $('resposta').innerHTML = '<div class="sinal sem">' + P + '<div><strong>' + esc(r.acao.titulo) + '</strong><span>' + esc(r.resposta) + '</span></div></div>';
+      $('porque').hidden = $('outros').hidden = true;
+    } else {
+      $('resposta').innerHTML =
+        '<div class="sinal">' + P + '<div><strong>' + esc(r.acao.titulo) + '</strong><span>' + melhor.livres + ' lugares livres de ' + melhor.lugares + ' às ' + hora + 'h, a ' + melhor.a_pe_min + ' min a pé</span></div></div>' +
+        '<a class="ir" href="' + noGoogleMaps(melhor) + '" target="_blank" rel="noreferrer">Abrir o caminho no Google Maps</a>';
+      mostrarPorque(melhor);
+      $('outros').hidden = !outros.length;
+      $('outros').innerHTML =
+        '<h2>Se estiver cheio</h2><ul class="outros">' +
+        outros.map((p) => '<li><b>' + esc(p.nome) + '</b><span>' + p.livres + ' lugares livres de ' + p.lugares + ', a ' + p.a_pe_min + ' min a pé</span><a href="' + noGoogleMaps(p) + '" target="_blank" rel="noreferrer">Caminho</a></li>').join('') +
+        '</ul>';
+    }
+    desenharMapa(r.itens);
+  } catch (e) {
+    if (n !== vez) return;
+    delete parquesDe[dia[0]]; // se foi este pedido a falhar, volta-se a tentar na próxima pergunta
+    $('resposta').innerHTML = '<p class="cartao aviso">Não consegui falar com a API (' + esc(e.message) + '). Confirma o endereço: ' + esc(API || location.origin) + '</p>';
+    $('porque').hidden = $('outros').hidden = true;
+  }
+}
+
+// O histórico do parque recomendado: lugares livres das 6h às 22h no dia da semana escolhido, com a hora de chegada marcada.
+function mostrarPorque(melhor) {
+  const parque = parques.find((p) => p.id === melhor.id);
+  $('porque').hidden = !parque;
+  if (!parque) return;
+  const horas = Array.from({ length: 17 }, (_, i) => i + 6);
+  const pior = Math.round(parque.lugares * (1 - parque.ocupacao_maxima));
+  $('porque').innerHTML =
+    '<h2>' + esc(parque.nome) + ' ao longo de ' + dia[2] + '</h2>' +
+    '<div class="dia" role="img" aria-label="Lugares livres por hora, das 6h às 22h">' +
+    horas.map((h) => '<i class="' + (h === hora ? 'agora' : '') + '" style="height:' + Math.max(3, (parque.livres[h] / parque.lugares) * 100) + '%" title="' + h + 'h: ' + parque.livres[h] + ' lugares livres"></i>').join('') +
+    '</div><div class="eixo"><span>6h</span><span>10h</span><span>14h</span><span>18h</span><span>22h</span></div>' +
+    '<p>Às ' + hora + 'h tinha <b>' + parque.livres[hora] + ' lugares livres</b> de ' + parque.lugares + ' (' + esc(medido) + '). Na semana medida, a ocupação nunca passou de ' + Math.round(parque.ocupacao_maxima * 100) + '%: sobraram sempre pelo menos ' + pior + '.</p>';
+}
+
+// O mapa: ruas, parques com os lugares livres à hora de chegada, o destino e o parque recomendado.
+// Por omissão aproxima-se do destino e dos parques sugeridos; o botão mostra a cidade toda.
+function desenharMapa(sugeridos = ultimos) {
+  if (!mapa) return;
+  ultimos = sugeridos;
+  const melhor = sugeridos[0];
+  const pr = mapa.projecao;
+  const dx = pr.ax + pr.bx * destino.lon;
+  const dy = pr.ay + pr.by * destino.lat;
+
+  // a janela do desenho: a cidade toda, ou o retângulo que apanha o destino e os parques sugeridos,
+  // com a proporção do espaço que o mapa tem no ecrã
+  const el = $('mapa');
+  let [x0, y0, w, h] = mapa.viewBox;
+  if (!cidadeToda) {
+    const proporcao = el.clientWidth && el.clientHeight ? el.clientWidth / el.clientHeight : w / h;
+    const xs = [dx, ...sugeridos.map((p) => p.x)];
+    const ys = [dy, ...sugeridos.map((p) => p.y)];
+    const lw = Math.max(220, Math.max(...xs) - Math.min(...xs) + 110, (Math.max(...ys) - Math.min(...ys) + 110) * proporcao);
+    const lh = lw / proporcao;
+    // centra-se nos pontos sem sair da cidade; se a janela for maior do que a cidade, centra-se a cidade
+    const encaixar = (v, tamanho, inicio, total) => (tamanho >= total ? inicio - (tamanho - total) / 2 : Math.max(inicio, Math.min(inicio + total - tamanho, (Math.min(...v) + Math.max(...v)) / 2 - tamanho / 2)));
+    x0 = encaixar(xs, lw, x0, w);
+    y0 = encaixar(ys, lh, y0, h);
+    w = lw;
+    h = lh;
+  }
+  el.setAttribute('viewBox', [x0, y0, w, h].join(' '));
+  // placas e rótulos ficam com o mesmo tamanho no ecrã, com mais ou menos aproximação
+  const porUnidade = el.clientWidth && el.clientHeight ? Math.min(el.clientWidth / w, el.clientHeight / h) : 280 / w;
+  const escala = 1.45 / porUnidade;
+
+  const placas = parques.map((p) => {
+    const ativo = p.estado === 'ativo';
+    const texto = ativo ? String(p.livres[hora]) : '?';
+    const largura = 9 + texto.length * 5.6;
+    return (
+      '<g class="parque' + (ativo && p.livres[hora] >= 2 ? '' : ' cheio') + '" transform="translate(' + p.x + ' ' + p.y + ') scale(' + escala + ')"><title>' + esc(p.nome) + '</title>' +
+      (melhor && melhor.id === p.id ? '<rect class="escolhido" x="-11" y="-11" width="' + (largura + 22) + '" height="22" rx="6"/>' : '') +
+      '<rect x="-1" y="-7" width="' + (largura + 8) + '" height="14" rx="3.5"/><rect class="p" x="-7" y="-7" width="14" height="14" rx="3"/>' +
+      '<text class="letra" x="0" y="3.6" text-anchor="middle">P</text><text x="' + (largura / 2 + 6.5) + '" y="3.5" text-anchor="middle">' + texto + '</text></g>'
+    );
+  });
+  $('mapa').innerHTML =
+    '<path class="ruas" d="' + mapa.d + '"/>' +
+    (melhor ? '<path class="caminho" d="M' + dx + ' ' + dy + ' L' + melhor.x + ' ' + melhor.y + '"/>' : '') +
+    placas.join('') +
+    '<g class="destino" transform="translate(' + dx + ' ' + dy + ') scale(' + escala + ')"><circle r="6"/><text y="19" text-anchor="middle">' + esc(destino.nome.split(',')[0]) + '</text></g>';
+  $('alcance').textContent = cidadeToda ? 'Aproximar do destino' : 'Ver a cidade toda';
+}
+
+// Um toque no mapa escolhe o destino: converte-se o ponto do desenho em longitude e latitude com a projeção que a API dá.
+$('mapa').addEventListener('click', (e) => {
+  if (!mapa) return;
+  const p = new DOMPoint(e.clientX, e.clientY).matrixTransform($('mapa').getScreenCTM().inverse());
+  escolher({ nome: 'Ponto no mapa', lon: (p.x - mapa.projecao.ax) / mapa.projecao.bx, lat: (p.y - mapa.projecao.ay) / mapa.projecao.by });
+});
+
+$('alcance').addEventListener('click', () => {
+  cidadeToda = !cidadeToda;
+  desenharMapa();
+});
+addEventListener('resize', () => desenharMapa());
+
+$('hora').addEventListener('input', (e) => {
+  const h = Number(e.target.value.split(':')[0]);
+  if (!e.target.value || h === hora) return;
+  hora = h;
+  responder();
+});
+
+// Arranque: o mapa pede-se uma vez; a resposta, sempre que a pergunta muda.
+if (SEM_API) {
+  $('com-api').hidden = $('json').hidden = true;
+  $('sem-api').hidden = false;
+}
+mostrarDestinos();
+mostrarDias();
+pedir('/v1/rede/mapa')
+  .then((m) => {
+    mapa = m;
+  })
+  .catch(() => {})
+  .then(responder);
+</script>
+</body>
+</html>

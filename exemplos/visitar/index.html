@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visitar Aveiro com menos gente</title>
+<meta name="description" content="Escolhe os locais, o dia e a hora de começar: a ordem de visita que apanha cada local mais longe do seu pico, segundo as contagens de peões de Aveiro.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a4fa3'/%3E%3Cpath d='M16 26s7-7.2 7-12.4a7 7 0 10-14 0C9 18.8 16 26 16 26z' fill='none' stroke='%23fff' stroke-width='2.6'/%3E%3Ccircle cx='16' cy='13.5' r='2.3' fill='%23fff'/%3E%3C/svg%3E">
+<!--
+  Segundo exemplo de uma aplicação feita com a API Aveiro em Movimento.
+  É este ficheiro e mais nada: sem bibliotecas, sem compilação, sem servidor próprio.
+  Para a publicar noutro sítio, basta alojar o ficheiro e dizer onde está a API: index.html?api=https://a-vossa-api
+-->
+<style>
+  :root { --fundo: #f2f4f6; --papel: #fff; --tinta: #101b2d; --tinta-2: #4b586d; --linha: #d3dae2; --linha-forte: #a3aebd; --sinal: #0a4fa3;
+    /* presenças face ao pico do local: um só tom, do claro ao escuro */
+    --p0: #e8eff8; --p1: #c3d6ee; --p2: #8fb2df; --p3: #3d72bd; --p4: #0a4fa3; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--tinta); font: 16px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  h1, h2, p, ol, ul { margin: 0; }
+  ol, ul { padding: 0; list-style: none; }
+  button { font: inherit; color: inherit; }
+  a { color: var(--sinal); text-underline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--sinal); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+
+  /* No telemóvel é uma coluna: pergunta, resposta, roteiro, grelha, mapa. */
+  main { max-width: 620px; margin: 0 auto; padding: 20px 16px 40px; }
+  .ecra, .corpo { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .lado, .direita { display: contents; }
+  .feito { margin-top: 16px; }
+  header { display: flex; align-items: center; gap: 12px; }
+  header svg { flex: none; }
+  h1 { font-size: 26px; font-weight: 800; line-height: 1.15; letter-spacing: -0.01em; }
+  header p { margin-top: 2px; font-size: 14px; color: var(--tinta-2); }
+  h2 { font-size: 15px; font-weight: 700; }
+  .cartao { background: var(--papel); border: 1px solid var(--linha); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+
+  /* a pergunta: que locais, em que dia, a que horas */
+  .pergunta { display: grid; gap: 12px; }
+  .campo > span { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--tinta-2); }
+  .campo small { display: block; margin-top: 6px; font-size: 13px; color: var(--tinta-2); }
+  .opcoes { display: flex; flex-wrap: wrap; gap: 8px; }
+  .opcoes button { min-height: 44px; padding: 0 14px; border: 1px solid var(--linha-forte); border-radius: 999px; background: var(--papel); font-size: 15px; font-weight: 600; cursor: pointer; }
+  .opcoes button[aria-pressed='true'] { background: var(--tinta); border-color: var(--tinta); color: #fff; }
+  .opcoes button:disabled { opacity: 0.4; cursor: default; }
+  .horas button { min-width: 48px; padding: 0 10px; font-variant-numeric: tabular-nums; }
+
+  /* a resposta, como sinal de direção: azul porque assenta em dados medidos */
+  .sinal { display: flex; align-items: center; gap: 16px; padding: 20px 20px 18px; border-radius: 12px; background: var(--sinal); color: #fff; box-shadow: inset 0 0 0 2px var(--sinal), inset 0 0 0 5px #fff; }
+  .sinal svg { flex: none; }
+  .sinal strong { display: block; font-size: clamp(22px, 5.4vw, 30px); font-weight: 800; line-height: 1.12; letter-spacing: -0.01em; text-wrap: balance; }
+  .sinal span { display: block; margin-top: 6px; font-size: 15px; }
+
+  /* o roteiro, hora a hora */
+  .roteiro li { display: grid; grid-template-columns: 26px 42px minmax(0, 1fr) auto; align-items: center; gap: 0 10px; padding: 9px 0; border-top: 1px solid var(--linha); }
+  .roteiro li:first-child { border-top: 0; }
+  .n { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--tinta); color: #fff; font-size: 14px; font-weight: 800; }
+  .roteiro time { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .roteiro b { display: block; font-size: 16px; line-height: 1.25; }
+  .roteiro small { display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--tinta-2); }
+  .roteiro small i { flex: none; width: 12px; height: 12px; border-radius: 3px; }
+  .roteiro em { font-size: 13px; font-style: normal; color: var(--tinta-2); white-space: nowrap; }
+
+  /* a grelha: cada local ao longo do dia, com a hora da visita marcada */
+  .grelha-topo { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }
+  .grelha-topo span { font-size: 13px; color: var(--tinta-2); }
+  table { width: 100%; margin-top: 8px; border-collapse: separate; border-spacing: 3px; table-layout: fixed; font-variant-numeric: tabular-nums; }
+  thead th { font-size: 12px; font-weight: 600; color: var(--tinta-2); }
+  th:first-child { width: 96px; }
+  tbody th { padding-right: 4px; font-size: 12.5px; font-weight: 600; line-height: 1.2; text-align: left; }
+  /* no telemóvel as células são estreitas de mais para o número: fica a cor, e os números das visitas estão no roteiro */
+  td { height: 30px; padding: 0; border-radius: 4px; font-size: 0; text-align: center; color: var(--tinta); }
+  .p0 { background: var(--p0); } .p1 { background: var(--p1); } .p2 { background: var(--p2); } .p3 { background: var(--p3); } .p4 { background: var(--p4); }
+  td.p3, td.p4 { color: #fff; }
+  td.visita { font-weight: 800; box-shadow: 0 0 0 2px var(--tinta), inset 0 0 0 1.5px #fff; }
+  .legenda { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 8px; font-size: 12.5px; color: var(--tinta-2); }
+  .legenda i { width: 16px; height: 12px; border-radius: 3px; }
+  .legenda .marca { width: 16px; height: 12px; margin-left: 10px; background: var(--papel); box-shadow: inset 0 0 0 2px var(--tinta); }
+  .ganho { margin-top: 8px; font-size: 14px; color: var(--tinta-2); }
+  .ganho b { color: var(--tinta); }
+
+  /* mapa: as paragens pela ordem do roteiro */
+  #mapa { display: block; width: 100%; height: auto; aspect-ratio: 680 / 480; margin-top: 8px; border-radius: 8px; background: #f8fafb; border: 1px solid var(--linha); }
+  #mapa text { font-family: inherit; }
+  .mapa-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .mapa-topo a { display: flex; align-items: center; min-height: 40px; font-size: 14px; font-weight: 600; }
+  .ruas { fill: none; stroke: #c9d2dd; stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+  .caminho { fill: none; stroke: var(--sinal); stroke-width: 3; stroke-dasharray: 1 7; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .fio { stroke: var(--tinta); stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .sitio { fill: var(--tinta); }
+  .paragem circle { fill: var(--tinta); stroke: #fff; stroke-width: 2; }
+  .paragem text { font-size: 11px; font-weight: 800; fill: #fff; }
+  .nota { margin-top: 6px; font-size: 13px; color: var(--tinta-2); }
+
+  /* como foi feito */
+  .feito p { margin-top: 6px; font-size: 14px; color: var(--tinta-2); }
+  pre { margin: 10px 0 0; padding: 12px; overflow-x: auto; border-radius: 8px; background: var(--tinta); color: #dce4f0; font: 12.5px/1.55 ui-monospace, Consolas, monospace; }
+  .aviso { color: #8a1c0c; }
+
+  /* No portátil cabe tudo na janela, sem deslizar: duas colunas com a altura do ecrã,
+     em que o roteiro e o mapa ficam com o espaço que sobra. "Como foi feito" vem logo a seguir. */
+  @media (min-width: 1000px) {
+    main { max-width: 1440px; padding: 0 20px 32px; }
+    .ecra { height: 100vh; height: 100dvh; min-height: 600px; grid-template-rows: auto minmax(0, 1fr); gap: 12px; padding: 14px 0 16px; }
+    .corpo { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 0; }
+    .lado, .direita { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+    .feito { margin-top: 0; }
+    header svg { width: 40px; height: 40px; }
+    h1 { font-size: 24px; }
+    .pergunta { gap: 8px; padding: 12px 16px; }
+    /* o nome de cada escolha fica à esquerda das opções, para poupar altura */
+    .campo { display: grid; grid-template-columns: 92px minmax(0, 1fr); align-items: baseline; gap: 0 8px; }
+    .campo > span { margin: 0; }
+    .opcoes { gap: 6px; }
+    .opcoes button { min-height: 36px; padding: 0 12px; font-size: 14px; }
+    .horas button { min-width: 40px; padding: 0 6px; }
+    .campo small { display: none; }
+    .sinal { padding: 15px 20px 14px; }
+    .sinal strong { font-size: clamp(22px, 2vw, 30px); }
+    .roteiro-cartao { flex: 1 1 0; min-height: 0; overflow-y: auto; }
+    /* cada paragem numa linha só */
+    .roteiro li { padding: 5px 0; }
+    .roteiro li > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 12px; }
+    .roteiro b { min-width: 168px; font-size: 15px; }
+    .grelha-cartao { flex: none; padding: 12px 16px; }
+    th:first-child { width: 150px; }
+    td { height: 26px; font-size: 11.5px; }
+    .mapa-cartao { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; padding: 10px 16px 12px; }
+    #mapa { flex: 1 1 0; min-height: 0; height: 0; aspect-ratio: auto; margin-top: 4px; }
+    .mapa-cartao .nota { display: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="ecra">
+    <header>
+      <svg viewBox="0 0 32 32" width="44" height="44" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0a4fa3"/><path d="M16 26s7-7.2 7-12.4a7 7 0 10-14 0C9 18.8 16 26 16 26z" fill="none" stroke="#fff" stroke-width="2.6"/><circle cx="16" cy="13.5" r="2.3" fill="#fff"/></svg>
+      <div>
+        <h1>Visitar Aveiro com menos gente</h1>
+        <p>Escolhe os locais, o dia e a hora de começar. A ordem vem das contagens de peões nos locais turísticos da cidade.</p>
+      </div>
+    </header>
+
+    <div class="corpo">
+      <div class="lado">
+        <section class="cartao pergunta" aria-label="Que locais, em que dia e a que horas">
+          <div class="campo">
+            <span id="t-locais">Quero visitar</span>
+            <div class="opcoes" id="locais" role="group" aria-labelledby="t-locais"></div>
+            <small id="locais-nota">Uma hora em cada local. Escolhe pelo menos dois.</small>
+          </div>
+          <div class="campo">
+            <span id="t-dia">Vou num</span>
+            <div class="opcoes" id="dias" role="group" aria-labelledby="t-dia"></div>
+          </div>
+          <div class="campo">
+            <span id="t-inicio">Começo</span>
+            <div class="opcoes horas" id="horas" role="group" aria-labelledby="t-inicio"></div>
+          </div>
+        </section>
+
+        <section aria-live="polite" id="resposta"><p class="cartao">A perguntar à API…</p></section>
+        <section class="cartao roteiro-cartao" id="roteiro" hidden></section>
+      </div>
+
+      <div class="direita">
+        <section class="cartao grelha-cartao" id="grelha" hidden></section>
+        <section class="cartao mapa-cartao">
+          <div class="mapa-topo">
+            <h2>No mapa</h2>
+            <a id="google" href="#" target="_blank" rel="noreferrer" hidden>Abrir o roteiro a pé no Google Maps</a>
+          </div>
+          <svg id="mapa" viewBox="0 0 680 480" role="img" aria-label="Mapa do centro de Aveiro com as paragens do roteiro numeradas pela ordem de visita"></svg>
+          <p class="nota">Os números são a ordem de visita. A linha liga as paragens em linha reta.</p>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <section class="cartao feito">
+    <h2>Como foi feito</h2>
+    <p id="com-api">Esta página é um ficheiro só, sem bibliotecas. O roteiro é um pedido à API Aveiro em Movimento, que já devolve a ordem, as horas e os números de cada paragem:</p>
+    <p id="sem-api" hidden>Esta página é um ficheiro só, sem bibliotecas. Nesta versão publicada não há API por trás: as presenças da semana medida vêm embutidas na página e o roteiro é calculado aqui, com a mesma regra. Ligada à API Aveiro em Movimento, a página faz só este pedido e recebe a resposta pronta:</p>
+    <pre id="pedido"></pre>
+    <p>A API experimenta todas as ordens possíveis, contando uma hora por local entre as 9h e as 18h, e procura a que apanha cada local mais longe do seu pico. Entre as que ficam a menos de 5 pontos percentuais dessa, escolhe a que obriga a andar menos.</p>
+    <p>As presenças foram contadas pelos sensores do Aveiro Tech City Living Lab na semana de 3 a 10 de novembro de 2026, hora a hora: a média dos dias úteis, um sábado e um domingo. São passagens de peões nas zonas de cada local, e a mesma pessoa pode ser contada mais do que uma vez. O roteiro diz como foi essa semana, não quanta gente lá está neste momento. Os minutos a pé são uma estimativa pela distância em linha reta. <a id="json" href="#" target="_blank" rel="noreferrer">Ver a resposta completa da API</a></p>
+  </section>
+</main>
+
+<script>
+// Onde está a API: ?api=https://... ou, por omissão, o servidor de onde esta página veio.
+const API = new URLSearchParams(location.search).get('api') || (location.protocol === 'file:' ? 'http://localhost:8000' : '');
+const CHAVE = 'cidadaos-demo';
+// Na versão publicada sem API (exemplos/sem-api.js), os mesmos pedidos são respondidos na própria página.
+const SEM_API = typeof aveiroSemApi === 'function';
+const pedir = (caminho) =>
+  SEM_API
+    ? aveiroSemApi(caminho)
+    : fetch(API + caminho, { headers: { 'X-API-Key': CHAVE } }).then((r) => {
+        if (!r.ok) throw new Error('a API respondeu ' + r.status);
+        return r.json();
+      });
+
+// Os dias que a API distingue no turismo: o identificador, o botão e como se diz numa frase.
+const DIAS = [
+  ['dias_uteis', 'Dia útil', 'num dia útil'],
+  ['sabado', 'Sábado', 'num sábado'],
+  ['domingo', 'Domingo', 'num domingo'],
+];
+const PRIMEIRA = 9; // as contagens de todos os locais vão das 9h às 18h
+const ULTIMA = 18;
+const hoje = new Date().getDay();
+let locais = []; // os locais turísticos, com nome e posição, dados pela API
+let escolhidos = ['rossio', 'moliceiros', 'lourenco-peixinho', 'ria']; // pela ordem em que foram escolhidos
+let dia = DIAS[hoje === 6 ? 1 : hoje === 0 ? 2 : 0]; // por omissão, o dia de hoje
+let inicio = null; // null = a API escolhe a melhor hora
+let mapa = null; // desenho das ruas, pedido uma vez
+let vez = 0; // só a resposta ao pedido mais recente é mostrada
+let ultimo = null; // a última resposta, para voltar a desenhar o mapa
+
+const $ = (id) => document.getElementById(id);
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = (n) => Number(n).toLocaleString('pt-PT');
+const pct = (x) => Math.round(x * 100) + '%';
+const passo = (v, pico) => 'p' + Math.min(4, Math.floor((v / pico) * 5)); // cinco degraus face ao pico do local
+const PIN = '<svg viewBox="0 0 24 24" width="44" height="44" aria-hidden="true"><path d="M12 21s6-6.2 6-10.6a6 6 0 10-12 0C6 14.8 12 21 12 21z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><circle cx="12" cy="10.2" r="2" fill="currentColor"/></svg>';
+
+function botoes(id, lista, aoEscolher) {
+  $(id).innerHTML = lista.map((b, i) => '<button type="button" data-i="' + i + '" aria-pressed="' + b.ativo + '"' + (b.inativo ? ' disabled' : '') + '>' + esc(b.texto) + '</button>').join('');
+  $(id).querySelectorAll('button').forEach((b) => b.addEventListener('click', () => aoEscolher(lista[b.dataset.i])));
+}
+
+function mostrarPergunta() {
+  botoes('locais', locais.map((l) => ({ texto: l.nome, id: l.id, ativo: escolhidos.includes(l.id) })), (b) => {
+    if (escolhidos.includes(b.id)) {
+      if (escolhidos.length === 2) return; // um roteiro precisa de dois locais
+      escolhidos = escolhidos.filter((x) => x !== b.id);
+    } else escolhidos = escolhidos.concat(b.id);
+    if (inicio !== null && inicio + escolhidos.length > ULTIMA) inicio = null; // a hora escolhida deixou de caber
+    mostrarPergunta();
+    responder();
+  });
+  botoes('dias', DIAS.map((d) => ({ texto: d[1], dia: d, ativo: d === dia })), (b) => {
+    dia = b.dia;
+    mostrarPergunta();
+    responder();
+  });
+  const horas = [{ texto: 'À melhor hora', hora: null, ativo: inicio === null }];
+  for (let h = PRIMEIRA; h <= ULTIMA - 2; h++) horas.push({ texto: h + 'h', hora: h, ativo: inicio === h, inativo: h + escolhidos.length > ULTIMA });
+  botoes('horas', horas, (b) => {
+    inicio = b.hora;
+    mostrarPergunta();
+    responder();
+  });
+}
+
+// A pergunta à API e a resposta no ecrã.
+async function responder() {
+  const n = ++vez;
+  const caminho = '/v1/respostas/roteiro-visita?locais=' + escolhidos.join(',') + '&dia=' + dia[0] + (inicio === null ? '' : '&inicio=' + inicio) + '&cenario=normal';
+  $('pedido').textContent = 'GET ' + caminho + '\nX-API-Key: ' + CHAVE;
+  $('json').href = (API || location.origin) + caminho;
+  try {
+    const r = await pedir(caminho);
+    if (n !== vez) return;
+    ultimo = r;
+    const medido = r.fonte.replace(/^real \(|\)$/g, '');
+    $('resposta').innerHTML =
+      '<div class="sinal">' + PIN + '<div><strong>' + esc(r.acao.titulo) + '</strong><span>' + r.itens.length + ' locais das ' + r.inicio + 'h às ' + r.fim + 'h, ' + r.a_pe_min + ' min a pé ao todo</span></div></div>';
+
+    $('roteiro').hidden = false;
+    $('roteiro').innerHTML =
+      '<h2>O roteiro, hora a hora</h2><ol class="roteiro">' +
+      r.itens.map((p, i) =>
+        '<li><span class="n">' + (i + 1) + '</span><time>' + p.hora + 'h</time><div><b>' + esc(p.nome) + '</b><small><i class="' + passo(p.presencas, p.pico) + '"></i>' +
+        fmt(p.presencas) + ' presenças por hora, ' + pct(p.do_pico) + ' do pico</small></div>' +
+        '<em>' + (i ? p.a_pe_min + ' min a pé' : '') + '</em></li>').join('') +
+      '</ol>';
+
+    const g = r.grelha;
+    const visita = Object.fromEntries(r.itens.map((p) => [p.id, p]));
+    let ganho = 'Nesta ordem apanhas cada local, em média, a <b>' + pct(r.ocupacao_media) + ' do seu pico</b>.';
+    if (r.ocupacao_pior <= r.ocupacao_media) ganho += ' A estas horas, a ordem não muda nada.';
+    else if (r.ocupacao_pedida >= r.ocupacao_pior) ganho += ' Pela ordem em que os escolheste seriam ' + pct(r.ocupacao_pedida) + ', a pior possível.';
+    else if (r.ocupacao_pedida > r.ocupacao_media) ganho += ' Pela ordem em que os escolheste seriam ' + pct(r.ocupacao_pedida) + '; na pior ordem, ' + pct(r.ocupacao_pior) + '.';
+    else ganho += ' Na pior ordem seriam ' + pct(r.ocupacao_pior) + '.';
+    $('grelha').hidden = false;
+    $('grelha').innerHTML =
+      '<div class="grelha-topo"><h2>Quando enche cada local</h2><span>Presenças por hora, ' + esc(medido) + '</span></div>' +
+      '<table><thead><tr><th></th>' + g.horas.map((h) => '<th scope="col">' + h + 'h</th>').join('') + '</tr></thead><tbody>' +
+      g.locais.map((l) => {
+        const p = visita[l.id];
+        return '<tr><th scope="row">' + esc(l.nome) + '</th>' +
+          l.presencas.map((v, i) => {
+            const h = g.horas[i];
+            const aqui = p.hora === h;
+            return '<td class="' + passo(v, p.pico) + (aqui ? ' visita' : '') + '" title="' + esc(l.nome) + ' às ' + h + 'h: ' + fmt(v) + ' presenças por hora, ' + pct(v / p.pico) + ' do pico' + (aqui ? ' (a tua visita)' : '') + '">' + v + '</td>';
+          }).join('') + '</tr>';
+      }).join('') +
+      '</tbody></table>' +
+      '<p class="legenda">menos gente<i class="p0"></i><i class="p1"></i><i class="p2"></i><i class="p3"></i><i class="p4"></i>mais gente, face ao pico de cada local<i class="marca"></i>a tua visita</p>' +
+      '<p class="ganho">' + ganho + '</p>';
+
+    const ponto = (p) => p.lat + ',' + p.lon;
+    const meio = r.itens.slice(1, -1).map(ponto).join('%7C');
+    $('google').hidden = false;
+    $('google').href = 'https://www.google.com/maps/dir/?api=1&travelmode=walking&origin=' + ponto(r.itens[0]) + '&destination=' + ponto(r.itens[r.itens.length - 1]) + (meio ? '&waypoints=' + meio : '');
+    desenharMapa();
+  } catch (e) {
+    if (n !== vez) return;
+    $('resposta').innerHTML = '<p class="cartao aviso">Não consegui falar com a API (' + esc(e.message) + '). Confirma o endereço: ' + esc(API || location.origin) + '</p>';
+    $('roteiro').hidden = $('grelha').hidden = $('google').hidden = true;
+  }
+}
+
+// O mapa: as ruas, a linha entre paragens e as paragens numeradas. Aproxima-se do retângulo que as apanha a todas.
+function desenharMapa() {
+  if (!mapa || !ultimo) return;
+  const paragens = ultimo.itens;
+  const el = $('mapa');
+  let [x0, y0, w, h] = mapa.viewBox;
+  const proporcao = el.clientWidth && el.clientHeight ? el.clientWidth / el.clientHeight : w / h;
+  const xs = paragens.map((p) => p.x);
+  const ys = paragens.map((p) => p.y);
+  const lw = Math.max(200, Math.max(...xs) - Math.min(...xs) + 90, (Math.max(...ys) - Math.min(...ys) + 90) * proporcao);
+  const lh = lw / proporcao;
+  x0 = (Math.min(...xs) + Math.max(...xs)) / 2 - lw / 2;
+  y0 = (Math.min(...ys) + Math.max(...ys)) / 2 - lh / 2;
+  el.setAttribute('viewBox', [x0, y0, lw, lh].join(' '));
+  // as marcas ficam com o mesmo tamanho no ecrã, com mais ou menos aproximação
+  const porUnidade = el.clientWidth && el.clientHeight ? Math.min(el.clientWidth / lw, el.clientHeight / lh) : 320 / lw;
+  const escala = 1.45 / porUnidade;
+
+  // locais muito próximos (Fórum, Moliceiros, Lourenço Peixinho) afastam-se até as marcas não se taparem;
+  // um fio liga cada marca ao sítio verdadeiro
+  const minimo = 22 * escala;
+  const marcas = paragens.map((p) => ({ x: p.x, y: p.y }));
+  for (let volta = 0; volta < 24; volta++) {
+    for (let a = 0; a < marcas.length; a++) {
+      for (let b = a + 1; b < marcas.length; b++) {
+        let dx = marcas[b].x - marcas[a].x;
+        let dy = marcas[b].y - marcas[a].y;
+        let d = Math.hypot(dx, dy);
+        if (d >= minimo) continue;
+        if (d < 0.01) { dx = 1; dy = 0; d = 1; }
+        const empurrao = (minimo - d) / 2;
+        marcas[a].x -= (dx / d) * empurrao;
+        marcas[a].y -= (dy / d) * empurrao;
+        marcas[b].x += (dx / d) * empurrao;
+        marcas[b].y += (dy / d) * empurrao;
+      }
+    }
+  }
+
+  el.innerHTML =
+    '<path class="ruas" d="' + mapa.d + '"/>' +
+    '<path class="caminho" d="M' + paragens.map((p) => p.x + ' ' + p.y).join(' L') + '"/>' +
+    paragens.map((p, i) => (Math.hypot(marcas[i].x - p.x, marcas[i].y - p.y) > 2 * escala
+      ? '<line class="fio" x1="' + p.x + '" y1="' + p.y + '" x2="' + marcas[i].x + '" y2="' + marcas[i].y + '"/><circle class="sitio" cx="' + p.x + '" cy="' + p.y + '" r="' + 2.2 * escala + '"/>'
+      : '')).join('') +
+    paragens.map((p, i) => '<g class="paragem" transform="translate(' + marcas[i].x + ' ' + marcas[i].y + ') scale(' + escala + ')"><title>' + (i + 1) + '. ' + esc(p.nome) + ' às ' + p.hora + 'h</title><circle r="9"/><text y="3.9" text-anchor="middle">' + (i + 1) + '</text></g>').join('');
+}
+
+addEventListener('resize', desenharMapa);
+
+// Arranque: os locais e o mapa pedem-se uma vez; o roteiro, sempre que a pergunta muda.
+if (SEM_API) {
+  $('com-api').hidden = $('json').hidden = true;
+  $('sem-api').hidden = false;
+}
+Promise.all([pedir('/v1/turismo/locais'), pedir('/v1/rede/mapa').catch(() => null)])
+  .then(([l, m]) => {
+    locais = l;
+    mapa = m;
+    mostrarPergunta();
+    responder();
+  })
+  .catch((e) => {
+    $('resposta').innerHTML = '<p class="cartao aviso">Não consegui falar com a API (' + esc(e.message) + '). Confirma o endereço: ' + esc(API || location.origin) + '</p>';
+  });
+</script>
+</body>
+</html>

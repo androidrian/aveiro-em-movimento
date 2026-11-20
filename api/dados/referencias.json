@@ -1,0 +1,137 @@
+{
+ "postes": {
+  "0001": {
+   "nome": "Rua da Pega",
+   "lon": -8.660737,
+   "lat": 40.63427,
+   "lugares": 21
+  },
+  "0003": {
+   "nome": "Cais do Paraíso",
+   "lon": -8.65764,
+   "lat": 40.640493,
+   "lugares": 30
+  },
+  "0004": {
+   "nome": "Rua do Alavário",
+   "lon": -8.657905,
+   "lat": 40.64139,
+   "lugares": 49
+  },
+  "0015": {
+   "nome": "Parque dos Remadores Olímpicos",
+   "lon": -8.656079,
+   "lat": 40.644579,
+   "lugares": 36
+  },
+  "0022": {
+   "nome": "Cais da Fonte Nova",
+   "lon": -8.643573,
+   "lat": 40.639268,
+   "lugares": 16
+  },
+  "0028": {
+   "nome": "Rua Infante Dom Henrique",
+   "lon": -8.648693,
+   "lat": 40.637282,
+   "lugares": 12
+  },
+  "0030": {
+   "nome": "Avenida 25 de Abril",
+   "lon": -8.646326,
+   "lat": 40.635719,
+   "lugares": 10
+  },
+  "0033": {
+   "nome": "Viela da Fonte dos Amores",
+   "lon": -8.648371,
+   "lat": 40.632408,
+   "lugares": 21
+  },
+  "0035": {
+   "nome": "Rua de Santiago",
+   "lon": -8.654792,
+   "lat": 40.630416,
+   "lugares": 25
+  },
+  "0038": {
+   "nome": "Rua Artur de Almeida Eça",
+   "lon": -8.639652,
+   "lat": 40.643112,
+   "lugares": 44
+  }
+ },
+ "locais": [
+  {
+   "id": "rossio",
+   "nome": "Rossio",
+   "zonas": [
+    "0001",
+    "0005"
+   ],
+   "lon": -8.656536,
+   "lat": 40.641195,
+   "visitas_semana": 65998,
+   "permanencia_mediana_s": 5.4
+  },
+  {
+   "id": "moliceiros",
+   "nome": "Saída de Moliceiros",
+   "zonas": [
+    "0002"
+   ],
+   "lon": -8.652934,
+   "lat": 40.641503,
+   "visitas_semana": 9804,
+   "permanencia_mediana_s": 4.8
+  },
+  {
+   "id": "forum",
+   "nome": "Fórum",
+   "zonas": [
+    "0003"
+   ],
+   "lon": -8.653065,
+   "lat": 40.641237,
+   "visitas_semana": 73478,
+   "permanencia_mediana_s": 5.8
+  },
+  {
+   "id": "lourenco-peixinho",
+   "nome": "Av. Lourenço Peixinho",
+   "zonas": [
+    "0004",
+    "0006",
+    "0007",
+    "0008"
+   ],
+   "lon": -8.652636,
+   "lat": 40.641747,
+   "visitas_semana": 286213,
+   "permanencia_mediana_s": 6.6
+  },
+  {
+   "id": "ria",
+   "nome": "Ria de Aveiro",
+   "zonas": [
+    "0009",
+    "0010"
+   ],
+   "lon": -8.643864,
+   "lat": 40.639684,
+   "visitas_semana": 19423,
+   "permanencia_mediana_s": 20.0
+  },
+  {
+   "id": "estacao",
+   "nome": "Estação de Comboios",
+   "zonas": [
+    "0011"
+   ],
+   "lon": -8.639798,
+   "lat": 40.643392,
+   "visitas_semana": 55388,
+   "permanencia_mediana_s": 8.3
+  }
+ ]
+}

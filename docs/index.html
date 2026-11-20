@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aveiro em Movimento · exemplos</title>
+<meta name="description" content="Duas aplicações de exemplo construídas sobre a API Aveiro em Movimento: onde estacionar e por que ordem visitar a cidade.">
+<style>
+  :root { --fundo: #f2f4f6; --papel: #fff; --tinta: #101b2d; --tinta-2: #4b586d; --linha: #d3dae2; --sinal: #0a4fa3; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--tinta); font: 17px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  main { max-width: 760px; margin: 0 auto; padding: 48px 20px 56px; }
+  h1 { margin: 0; font-size: clamp(32px, 7vw, 46px); font-weight: 800; line-height: 1.08; letter-spacing: -0.02em; }
+  p { margin: 14px 0 0; color: var(--tinta-2); }
+  a { color: var(--sinal); text-underline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--sinal); outline-offset: 3px; }
+  ul { display: grid; gap: 14px; margin: 30px 0 0; padding: 0; list-style: none; }
+  /* cada aplicação é um sinal de direção: azul, porque assenta em dados medidos */
+  .sinal { display: block; padding: 20px 22px 18px; border-radius: 12px; background: var(--sinal); color: #fff; text-decoration: none; box-shadow: inset 0 0 0 2px var(--sinal), inset 0 0 0 5px #fff; }
+  .sinal:hover { background: #083f85; }
+  .sinal strong { display: block; font-size: clamp(22px, 5vw, 28px); font-weight: 800; line-height: 1.15; }
+  .sinal span { display: block; margin-top: 6px; font-size: 16px; }
+  .nota { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--linha); font-size: 15px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Aveiro em Movimento</h1>
+  <p>Uma API sobre os sensores de Aveiro, para qualquer entidade construir serviços com os dados da cidade. Estas duas páginas são exemplos do que se faz com ela.</p>
+  <ul>
+    <li><a class="sinal" href="estacionar/"><strong>Onde estaciono em Aveiro?</strong><span>O parque com lugares livres mais perto do destino, à hora de chegada.</span></a></li>
+    <li><a class="sinal" href="visitar/"><strong>Visitar Aveiro com menos gente</strong><span>A ordem de visita que apanha cada local turístico longe do seu pico.</span></a></li>
+  </ul>
+  <p class="nota">Aqui as páginas funcionam sem a API: os dados vêm embutidos em cada uma e são os da semana de 3 a 10 de novembro de 2026, medidos pelos sensores do Aveiro Tech City Living Lab. Mostram como foi essa semana, não o que se passa neste momento. O código da API e destas páginas está em <a href="https://github.com/androidrian/aveiro-em-movimento">github.com/androidrian/aveiro-em-movimento</a>.</p>
+</main>
+</body>
+</html>
